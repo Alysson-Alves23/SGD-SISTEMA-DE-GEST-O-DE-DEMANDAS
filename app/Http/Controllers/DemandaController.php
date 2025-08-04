@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Demanda;
+use App\Models\ChecklistItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -77,9 +78,21 @@ class DemandaController extends Controller
 
         $demanda = Demanda::create($validatedData);
 
+        // Processar checklist se fornecido
+        if ($request->has('checklist_items') && is_array($request->checklist_items)) {
+            foreach ($request->checklist_items as $index => $itemDescricao) {
+                if (!empty(trim($itemDescricao))) {
+                    $demanda->checklistItems()->create([
+                        'descricao' => trim($itemDescricao),
+                        'ordem' => $index + 1,
+                    ]);
+                }
+            }
+        }
+
         return response()->json([
             'message' => 'Demanda cadastrada com sucesso!',
-            'demanda' => $demanda
+            'demanda' => $demanda->load('checklistItems')
         ], 201); // 201 Created
     }
 
@@ -91,7 +104,7 @@ class DemandaController extends Controller
     {
         // Graças ao Route-Model Binding, o Laravel já encontrou a demanda pelo ID na URL.
         // Apenas carregamos os relacionamentos para incluir na resposta.
-        $demanda->load('solicitante:id,nome', 'executor:id,nome', 'atualizacoes.usuario:id,nome');
+        $demanda->load('solicitante:id,nome', 'executor:id,nome', 'atualizacoes.usuario:id,nome', 'checklistItems.concluidoPor:id,nome');
 
         return response()->json([
             'demanda' => $demanda,
@@ -130,6 +143,22 @@ class DemandaController extends Controller
         // Remove a descrição da mudança do array antes de atualizar a demanda
         $mudancaDescricao = $validatedData['mudanca_descricao'];
         unset($validatedData['mudanca_descricao']);
+
+        // Processar checklist se fornecido
+        if ($request->has('checklist_items') && is_array($request->checklist_items)) {
+            // Remover itens existentes
+            $demanda->checklistItems()->delete();
+            
+            // Adicionar novos itens
+            foreach ($request->checklist_items as $index => $itemDescricao) {
+                if (!empty(trim($itemDescricao))) {
+                    $demanda->checklistItems()->create([
+                        'descricao' => trim($itemDescricao),
+                        'ordem' => $index + 1,
+                    ]);
+                }
+            }
+        }
 
         // Atualiza a demanda com os dados validados
         $demanda->update($validatedData);

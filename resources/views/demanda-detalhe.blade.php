@@ -34,6 +34,63 @@
             padding: 20px;
             box-sizing: border-box;
     }
+    
+    /* Estilos para o checklist */
+    .checklist-container {
+        background-color: #f9f9f9;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 5px;
+    }
+    
+    .checklist-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 8px;
+        background-color: white;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .checklist-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .checklist-checkbox {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+    
+    .checklist-text {
+        flex: 1;
+        font-size: 0.95em;
+        color: #333;
+    }
+    
+    .checklist-item.concluido .checklist-text {
+        text-decoration: line-through;
+        color: #666;
+    }
+    
+    .checklist-item.concluido {
+        background-color: #f8f9fa;
+        border-color: #d4edda;
+    }
+    
+    .checklist-meta {
+        font-size: 0.8em;
+        color: #777;
+        margin-left: 10px;
+    }
+    
+    .checklist-empty {
+        color: #777;
+        font-style: italic;
+        text-align: center;
+        padding: 20px;
+    }
 
 </style>
 @endpush
@@ -79,6 +136,32 @@
         return isNaN(date.getTime()) ? 'Data inválida' : date.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     }
 
+    function renderChecklist(items) {
+        if (!items || items.length === 0) {
+            return '<div class="checklist-container"><div class="checklist-empty">Nenhum item no checklist.</div></div>';
+        }
+
+        let checklistHtml = '<div class="checklist-container">';
+        
+        items.forEach(item => {
+            const isConcluido = item.concluido;
+            const concluidoClass = isConcluido ? 'concluido' : '';
+            const concluidoMeta = isConcluido && item.concluido_por ? 
+                `<div class="checklist-meta">Concluído por ${sanitizeForHtml(item.concluido_por.nome)} em ${formatTimestampToBrazilian(item.concluido_em)}</div>` : '';
+            
+            checklistHtml += `
+                <div class="checklist-item ${concluidoClass}">
+                    <input type="checkbox" class="checklist-checkbox" ${isConcluido ? 'checked' : ''} disabled>
+                    <div class="checklist-text">${sanitizeForHtml(item.descricao)}</div>
+                    ${concluidoMeta}
+                </div>
+            `;
+        });
+        
+        checklistHtml += '</div>';
+        return checklistHtml;
+    }
+
     function getCssClassForStatus(statusText) {
         if (!statusText) return 'desconhecido';
         return String(statusText).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
@@ -106,6 +189,7 @@
             'finalização da execução': formatDateToBrazilian(demanda.finalizacao_execucao),
             'tempo de execução': sanitizeForHtml(demanda.tempo_execucao || 'N/A'),
             'descrição dos itens': `<div class="description-box">${sanitizeForHtml(demanda.descricao_itens || 'Nenhuma descrição.')}</div>`,
+            'checklist': renderChecklist(demanda.checklist_items || []),
             'descrição da pendência': `<div class="description-box">${sanitizeForHtml(demanda.descricao_pendencia || 'Nenhuma pendência.')}</div>`,
             'observações': `<div class="description-box">${sanitizeForHtml(demanda.observacoes || 'Nenhuma observação.')}</div>`,
             'criado em': formatTimestampToBrazilian(demanda.criado_em),

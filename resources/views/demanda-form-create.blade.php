@@ -99,6 +99,60 @@
             padding: 20px;
             box-sizing: border-box;
         }
+        
+        /* Estilos para o checklist */
+        .checklist-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        
+        .checklist-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .remove-checklist-item {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+        
+        .remove-checklist-item:hover {
+            background: #c82333;
+        }
+        
+        .add-checklist-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 8px;
+        }
+        
+        .add-checklist-btn:hover {
+            background: #218838;
+        }
 
 </style>
 @endpush
@@ -121,7 +175,22 @@
                     <div class="form-group"><label for="numero_pedido_ou_nf">Nº Pedido/NF</label><input type="text" id="numero_pedido_ou_nf" name="numero_pedido_ou_nf"></div>
                     <div class="form-group"><label for="executor_id">Executor Designado</label><select id="executor_id" name="executor_id"><option value="">Carregando...</option></select></div>
                     <div class="form-group"><label for="prazo_execucao">Prazo de Execução</label><input type="date" id="prazo_execucao" name="prazo_execucao"></div>
-                    <div class="form-group full-width-group" style="margin-top:20px;"><label for="descricao_itens">Descrição Detalhada</label><textarea id="descricao_itens" name="descricao_itens" required></textarea></div>
+                    <div class="form-group full-width-group" style="margin-top:20px;">
+                        <label for="descricao_itens">Descrição Detalhada</label>
+                        <textarea id="descricao_itens" name="descricao_itens" required></textarea>
+                    </div>
+                    
+                    <div class="form-group full-width-group">
+                        <label>Checklist de Itens</label>
+                        <div id="checklist-container">
+                            <div class="checklist-item">
+                                <input type="text" name="checklist_items[]" placeholder="Digite um item do checklist" class="checklist-input">
+                                <button type="button" class="remove-checklist-item" style="display: none;">×</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-checklist-item" class="add-checklist-btn">+ Adicionar Item</button>
+                    </div>
+                    
                     <div class="form-group full-width-group"><label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes"></textarea></div>
                 </div>
 
@@ -254,6 +323,48 @@
         } finally {
             submitButton.disabled = false;
         }
+    });
+
+    // Funcionalidade do checklist
+    document.addEventListener('DOMContentLoaded', function() {
+        const checklistContainer = document.getElementById('checklist-container');
+        const addChecklistBtn = document.getElementById('add-checklist-item');
+
+        // Adicionar novo item
+        addChecklistBtn.addEventListener('click', function() {
+            const newItem = document.createElement('div');
+            newItem.className = 'checklist-item';
+            newItem.innerHTML = `
+                <input type="text" name="checklist_items[]" placeholder="Digite um item do checklist" class="checklist-input">
+                <button type="button" class="remove-checklist-item">×</button>
+            `;
+            checklistContainer.appendChild(newItem);
+            
+            // Mostrar botão de remover se houver mais de um item
+            updateRemoveButtons();
+        });
+
+        // Remover item
+        checklistContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-checklist-item')) {
+                e.target.parentElement.remove();
+                updateRemoveButtons();
+            }
+        });
+
+        function updateRemoveButtons() {
+            const items = checklistContainer.querySelectorAll('.checklist-item');
+            const removeButtons = checklistContainer.querySelectorAll('.remove-checklist-item');
+            
+            if (items.length === 1) {
+                removeButtons[0].style.display = 'none';
+            } else {
+                removeButtons.forEach(btn => btn.style.display = 'block');
+            }
+        }
+
+        // Inicializar
+        updateRemoveButtons();
     });
 </script>
 @endpush
