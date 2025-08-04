@@ -87,11 +87,44 @@ class DemandaController extends Controller
      * Exibir os detalhes de uma demanda específica.
      * Esta função substitui sua API /api/demanda/{id}.
      */
-    public function show(Demanda $demanda)
+    public function show(Request $request, Demanda $demanda)
     {
+        $user = $request->user();
+        
+        // Verificação de autorização baseada no perfil do usuário
+        if ($user->perfil === 'usuário') {
+            // Usuários só podem ver demandas onde são solicitante ou executor
+            if ($demanda->solicitante_id !== $user->id && $demanda->executor_id !== $user->id) {
+                return response()->json(['error' => 'Não autorizado para visualizar esta demanda.'], 403);
+            }
+        } elseif ($user->perfil === 'gestor') {
+            // Gestores só podem ver demandas do seu grupo
+            $demanda->load('solicitante:grupo_id', 'executor:grupo_id');
+            
+            // Verifica se o solicitante ou executor pertence ao grupo do gestor
+            $solicitanteDoGrupo = $demanda->solicitante->grupo_id === $user->grupo_id;
+            $executorDoGrupo = $demanda->executor && $demanda->executor->grupo_id === $user->grupo_id;
+            
+            // Log para debug (remover em produção)
+            \Log::info('Autorização Gestor', [
+                'user_id' => $user->id,
+                'user_grupo_id' => $user->grupo_id,
+                'demanda_id' => $demanda->numero_demanda,
+                'solicitante_grupo_id' => $demanda->solicitante->grupo_id,
+                'executor_grupo_id' => $demanda->executor ? $demanda->executor->grupo_id : null,
+                'solicitante_do_grupo' => $solicitanteDoGrupo,
+                'executor_do_grupo' => $executorDoGrupo
+            ]);
+            
+            if (!$solicitanteDoGrupo && !$executorDoGrupo) {
+                return response()->json(['error' => 'Não autorizado para visualizar esta demanda.'], 403);
+            }
+        }
+        // Administradores podem ver todas as demandas
+        
         // Graças ao Route-Model Binding, o Laravel já encontrou a demanda pelo ID na URL.
         // Apenas carregamos os relacionamentos para incluir na resposta.
-        $demanda->load('solicitante:id,nome', 'executor:id,nome', 'atualizacoes.usuario:id,nome');
+        $demanda->load('solicitante:id,nome,grupo_id', 'executor:id,nome,grupo_id', 'atualizacoes.usuario:id,nome');
 
         return response()->json([
             'demanda' => $demanda,
@@ -106,6 +139,39 @@ class DemandaController extends Controller
      */
     public function update(Request $request, Demanda $demanda)
     {
+        $user = $request->user();
+        
+        // Verificação de autorização baseada no perfil do usuário
+        if ($user->perfil === 'usuário') {
+            // Usuários só podem editar demandas onde são solicitante ou executor
+            if ($demanda->solicitante_id !== $user->id && $demanda->executor_id !== $user->id) {
+                return response()->json(['error' => 'Não autorizado para editar esta demanda.'], 403);
+            }
+        } elseif ($user->perfil === 'gestor') {
+            // Gestores só podem editar demandas do seu grupo
+            $demanda->load('solicitante:grupo_id', 'executor:grupo_id');
+            
+            // Verifica se o solicitante ou executor pertence ao grupo do gestor
+            $solicitanteDoGrupo = $demanda->solicitante->grupo_id === $user->grupo_id;
+            $executorDoGrupo = $demanda->executor && $demanda->executor->grupo_id === $user->grupo_id;
+            
+            // Log para debug (remover em produção)
+            \Log::info('Autorização Gestor Update', [
+                'user_id' => $user->id,
+                'user_grupo_id' => $user->grupo_id,
+                'demanda_id' => $demanda->numero_demanda,
+                'solicitante_grupo_id' => $demanda->solicitante->grupo_id,
+                'executor_grupo_id' => $demanda->executor ? $demanda->executor->grupo_id : null,
+                'solicitante_do_grupo' => $solicitanteDoGrupo,
+                'executor_do_grupo' => $executorDoGrupo
+            ]);
+            
+            if (!$solicitanteDoGrupo && !$executorDoGrupo) {
+                return response()->json(['error' => 'Não autorizado para editar esta demanda.'], 403);
+            }
+        }
+        // Administradores podem editar todas as demandas
+        
         // Validação expandida para todos os campos do formulário de edição
         $validatedData = $request->validate([
             'tipo' => 'required|string|max:100',

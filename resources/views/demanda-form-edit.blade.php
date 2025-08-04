@@ -162,6 +162,14 @@
                 window.location.href = '/login';
                 return;
             }
+            if (demandResponse.status === 403) {
+                const errorData = await demandResponse.json();
+                throw new Error(errorData.error || 'Não autorizado para visualizar esta demanda.');
+            }
+            if (usersResponse.status === 403) {
+                const errorData = await usersResponse.json();
+                throw new Error(errorData.error || 'Não autorizado para acessar usuários.');
+            }
             if (!demandResponse.ok) throw new Error(`Erro ao buscar demanda: ${demandResponse.statusText}`);
             if (!usersResponse.ok) throw new Error(`Erro ao buscar usuários: ${usersResponse.statusText}`);
 
@@ -220,6 +228,8 @@
                 formMessageArea.textContent = 'Demanda atualizada com sucesso!';
                 formMessageArea.style.color = 'green';
                 modal.style.display = 'none';
+            } else if (response.status === 403) {
+                throw new Error(responseData.error || 'Não autorizado para editar esta demanda.');
             } else {
                 let errorMsg = responseData.error || (responseData.errors ? Object.values(responseData.errors).flat().join(' ') : `Erro: ${response.statusText}`);
                 throw new Error(errorMsg);
