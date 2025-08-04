@@ -35,6 +35,60 @@
            .page-container {
             max-width: 800px;
         }
+        
+        /* Estilos para o checklist */
+        .checklist-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        
+        .checklist-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .remove-checklist-item {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+        
+        .remove-checklist-item:hover {
+            background: #c82333;
+        }
+        
+        .add-checklist-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 8px;
+        }
+        
+        .add-checklist-btn:hover {
+            background: #218838;
+        }
 </style>
 @endpush
 
@@ -64,6 +118,18 @@
                     <div class="form-group"><label for="status_execucao">Status da Execução</label><select id="status_execucao" name="status_execucao" required></select></div>
                     <div class="form-group"><label for="tempo_execucao">Tempo de Execução</label><input type="text" id="tempo_execucao" name="tempo_execucao"></div>
                     <div class="form-group full-width-group"><label for="descricao_itens">Descrição Detalhada</label><textarea id="descricao_itens" name="descricao_itens" rows="4" required></textarea></div>
+                    
+                    <div class="form-group full-width-group">
+                        <label>Checklist de Itens</label>
+                        <div id="checklist-container">
+                            <div class="checklist-item">
+                                <input type="text" name="checklist_items[]" placeholder="Digite um item do checklist" class="checklist-input">
+                                <button type="button" class="remove-checklist-item" style="display: none;">×</button>
+                            </div>
+                        </div>
+                        <button type="button" id="add-checklist-item" class="add-checklist-btn">+ Adicionar Item</button>
+                    </div>
+                    
                     <div class="form-group full-width-group"><label for="descricao_pendencia">Descrição da Pendência</label><textarea id="descricao_pendencia" name="descricao_pendencia" rows="3"></textarea></div>
                     <div class="form-group full-width-group"><label for="observacoes">Observações Gerais</label><textarea id="observacoes" name="observacoes" rows="3"></textarea></div>
                 </div>
@@ -126,6 +192,9 @@
         document.getElementById('descricao_itens').value = demanda.descricao_itens || '';
         document.getElementById('descricao_pendencia').value = demanda.descricao_pendencia || '';
         document.getElementById('observacoes').value = demanda.observacoes || '';
+
+        // Carregar checklist
+        loadChecklistItems(demanda.checklist_items || []);
 
         populateSelectWithOptions(document.getElementById('tipo'), ["Demanda Padrão", "Suporte Técnico", "Demanda Comercial", "Demanda de Estoque", "Demanda de Manutenção", "Demanda Produção", "Demanda de Serviços Gerais"], demanda.tipo, "Selecione");
         populateSelectWithOptions(document.getElementById('natureza'), ["SERVIÇOS GERAIS", "PRODUÇÃO", "SUPORTE E MANUTENÇÃO", "PRODUÇÃO P/ ESTOQUE", "INTERNA"], demanda.natureza, "Selecione");
@@ -230,6 +299,77 @@
         } finally {
             confirmSaveButton.disabled = false;
         }
+    });
+
+    // Função para carregar itens do checklist
+    function loadChecklistItems(items) {
+        const checklistContainer = document.getElementById('checklist-container');
+        checklistContainer.innerHTML = '';
+        
+        if (items && items.length > 0) {
+            items.forEach(item => {
+                const newItem = document.createElement('div');
+                newItem.className = 'checklist-item';
+                newItem.innerHTML = `
+                    <input type="text" name="checklist_items[]" value="${sanitizeForHtml(item.descricao)}" placeholder="Digite um item do checklist" class="checklist-input">
+                    <button type="button" class="remove-checklist-item">×</button>
+                `;
+                checklistContainer.appendChild(newItem);
+            });
+        } else {
+            // Adicionar um item vazio se não houver itens
+            const newItem = document.createElement('div');
+            newItem.className = 'checklist-item';
+            newItem.innerHTML = `
+                <input type="text" name="checklist_items[]" placeholder="Digite um item do checklist" class="checklist-input">
+                <button type="button" class="remove-checklist-item" style="display: none;">×</button>
+            `;
+            checklistContainer.appendChild(newItem);
+        }
+        
+        updateRemoveButtons();
+    }
+
+    // Funcionalidade do checklist
+    document.addEventListener('DOMContentLoaded', function() {
+        const checklistContainer = document.getElementById('checklist-container');
+        const addChecklistBtn = document.getElementById('add-checklist-item');
+
+        // Adicionar novo item
+        addChecklistBtn.addEventListener('click', function() {
+            const newItem = document.createElement('div');
+            newItem.className = 'checklist-item';
+            newItem.innerHTML = `
+                <input type="text" name="checklist_items[]" placeholder="Digite um item do checklist" class="checklist-input">
+                <button type="button" class="remove-checklist-item">×</button>
+            `;
+            checklistContainer.appendChild(newItem);
+            
+            // Mostrar botão de remover se houver mais de um item
+            updateRemoveButtons();
+        });
+
+        // Remover item
+        checklistContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-checklist-item')) {
+                e.target.parentElement.remove();
+                updateRemoveButtons();
+            }
+        });
+
+        function updateRemoveButtons() {
+            const items = checklistContainer.querySelectorAll('.checklist-item');
+            const removeButtons = checklistContainer.querySelectorAll('.remove-checklist-item');
+            
+            if (items.length === 1) {
+                removeButtons[0].style.display = 'none';
+            } else {
+                removeButtons.forEach(btn => btn.style.display = 'block');
+            }
+        }
+
+        // Inicializar
+        updateRemoveButtons();
     });
 </script>
 @endpush

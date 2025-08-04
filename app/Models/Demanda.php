@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Demanda extends Model
 {
@@ -31,5 +32,20 @@ class Demanda extends Model
     public function atualizacoes(): HasMany
     {
         return $this->hasMany(DemandaAtualizacao::class, 'demanda_id', 'numero_demanda');
+    }
+
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(ChecklistItem::class, 'demanda_id', 'numero_demanda')->ordenados();
+    }
+
+    public function checklistItemsConcluidos(): HasMany
+    {
+        return $this->hasMany(ChecklistItem::class, 'demanda_id', 'numero_demanda')->concluidos()->ordenados();
+    }
+
+    public function checklistItemsPendentes(): HasMany
+    {
+        return $this->hasMany(ChecklistItem::class, 'demanda_id', 'numero_demanda')->pendentes()->ordenados();
     }
 }
